@@ -35,66 +35,80 @@ class OrderController extends Controller
         return $this->successResponse($order, 'Order retrieved successfully');
     }
 
-    public function checkout(Request $request)
-    {
-        $user = auth()->user();
-        $cartItems = Cart::with('product.inventory')
-            ->where('user_id', $user->id)
-            ->get();
+   public function checkout(Request $request)
+{
+    $user = auth()->user();
 
-        if ($cartItems->isEmpty()) {
-            return $this->errorResponse('Cart is empty', null, 400);
-        }
+    $cartItems = Cart::with('product')
+        ->where('user_id', $user->id)
+        ->get();
+
+    if ($cartItems->isEmpty()) {
+        return $this->errorResponse('Cart is empty', null, 400);
+    }
+
+    DB::beginTransaction();
+
+    try {
+
+        $totalAmount = 0;
 
         foreach ($cartItems as $item) {
-            if ($item->product->inventory->quantity < $item->quantity) {
-                return $this->errorResponse(
-                    "Insufficient stock for product: {$item->product->name}",
-                    null,
-                    400
-                );
+
+            $inventory = \App\Models\Inventory::where('product_id', $item->product_id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$inventory || $inventory->quantity < $item->quantity) {
+                throw new \Exception("Insufficient stock for product: {$item->product->name}");
             }
+
+            $totalAmount += $item->quantity * $item->product->price;
         }
 
-        DB::beginTransaction();
+        $order = Order::create([
+            'order_number' => 'ORD-' . Str::random(8) . time(),
+            'user_id' => $user->id,
+            'total_amount' => $totalAmount,
+            'status' => 'pending',
+        ]);
 
-        try {
-            $totalAmount = $cartItems->sum(function ($item) {
-                return $item->quantity * $item->product->price;
-            });
+        foreach ($cartItems as $item) {
 
-            $order = Order::create([
-                'order_number' => 'ORD-' . Str::random(8) . time(),
-                'user_id' => $user->id,
-                'total_amount' => $totalAmount,
-                'status' => 'pending',
+            $inventory = \App\Models\Inventory::where('product_id', $item->product_id)
+                ->lockForUpdate()
+                ->first();
+
+            OrderItem::create([
+                'order_id'   => $order->id,
+                'product_id' => $item->product_id,
+                'quantity'   => $item->quantity,
+                'price'      => $item->product->price,
             ]);
 
-            foreach ($cartItems as $item) {
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => $item->product_id,
-                    'quantity' => $item->quantity,
-                    'price' => $item->product->price,
-                ]);
-
-                $inventory = $item->product->inventory;
-                $inventory->quantity -= $item->quantity;
-                $inventory->save();
-            }
-
-            Cart::where('user_id', $user->id)->delete();
-
-            DB::commit();
-
-            return $this->successResponse(
-                new OrderResource($order->load('items')),
-                'Order placed successfully',
-                201
-            );
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return $this->errorResponse('Checkout failed: ' . $e->getMessage(), null, 500);
+            $inventory->quantity -= $item->quantity;
+            $inventory->save();
         }
+
+        Cart::where('user_id', $user->id)->delete();
+
+        DB::commit();
+
+        return $this->successResponse(
+            new OrderResource($order->load('items.product')),
+            'Order placed successfully',
+            201
+        );
+
+    } catch (\Exception $e) {
+
+        DB::rollBack();
+
+        return $this->errorResponse(
+            'Checkout failed: ' . $e->getMessage(),
+            null,
+            400
+        );
     }
+}
 }
