@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\CartItemResource;
 use App\Models\Cart;
 use App\Models\Product;
 use App\Traits\ApiResponseTrait;
@@ -23,7 +24,7 @@ class CartController extends Controller
         });
 
         $data = [
-            'items' => $cart,
+            'items' => CartItemResource::collection($cart),
             'total' => $total,
         ];
 
@@ -53,7 +54,9 @@ class CartController extends Controller
             ]
         );
 
-        return $this->successResponse($cartItem, 'Product added to cart successfully', 201);
+        return $this->successResponse( new CartItemResource($cartItem->load('product')),
+         'Product added to cart successfully',
+          201);
     }
 
     public function update(Request $request, $id)
