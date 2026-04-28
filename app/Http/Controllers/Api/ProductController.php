@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\ProductCollection;
 use App\Models\Product;
 use App\Models\Inventory;
 use App\Traits\ApiResponseTrait;
@@ -15,12 +16,14 @@ class ProductController extends Controller
 
     public function index(Request $request)
     {
-        $query = Product::with(['category', 'inventory']);
-        if ($request->has('category_id')) {
-            $query->where('category_id', $request->category_id);
-        }
-        $products = $query->paginate(15);
-        return $this->successResponse($products, 'Products retrieved successfully');
+       $query = Product::with(['category', 'inventory']);
+    if ($request->has('category_id')) {
+        $query->where('category_id', $request->category_id);
+    }
+    $products = $query->paginate(15);
+    
+    
+    return $this->successResponse(new ProductCollection($products), 'Products retrieved successfully');
     }
 
     public function show($id)

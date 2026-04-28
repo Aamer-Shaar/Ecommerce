@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\OrderResource;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Cart;
@@ -87,7 +88,7 @@ class OrderController extends Controller
             DB::commit();
 
             return $this->successResponse(
-                $order->load('items.product'),
+                new OrderResource($order->load('items')),
                 'Order placed successfully',
                 201
             );
