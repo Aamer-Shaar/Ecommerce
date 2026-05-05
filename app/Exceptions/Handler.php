@@ -4,6 +4,7 @@ namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -26,6 +27,12 @@ class Handler extends ExceptionHandler
                     'message' => 'Resource not found',
                     'errors' => null,
                 ], 404);
+            }
+            if ($exception instanceof ThrottleRequestsException) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Too many requests. Please slow down.',
+                ], 429);
             }
         }
 

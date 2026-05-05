@@ -18,7 +18,7 @@ class ProcessOrderJob implements ShouldQueue
      */
      protected $order;
 
-      public $tries = 3;//عدد المحاولات
+      public $tries = 3; //عدد المحاولات
 
     public function __construct(Order $order)
     {
