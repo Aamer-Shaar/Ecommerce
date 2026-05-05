@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
 {
@@ -27,7 +28,7 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        $token = auth('api')->login($user);
+        $token = JWTAuth::fromUser($user);
 
         $data = [
             'user' => $user,
@@ -71,11 +72,11 @@ class AuthController extends Controller
     // تحديث التوكن (Refresh)
     public function refresh()
     {
-        return $this->respondWithToken(auth('api')->refresh(), 'Token refreshed successfully');
+        return $this->respondWithToken(JWTAuth::parseToken()->refresh(), 'Token refreshed successfully');
     }
 
     // تنسيق الرد مع التوكن
-    protected function respondWithToken($token, $message = 'Success')
+    protected function respondWithToken(string $token, string $message = 'Success')
     {
         $data = [
             'access_token' => $token,
