@@ -87,19 +87,18 @@ class ProductController extends Controller
 
         $product = Product::findOrFail($id);
 
-        $request->validate([
+        $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'description' => 'sometimes|string',
             'price' => 'sometimes|numeric|min:0',
             'category_id' => 'sometimes|exists:categories,id',
         ]);
 
-        if ($request->has('name')) {
-            $product->name = $request->name;
-            $product->slug = Str::slug($request->name);
+        if (array_key_exists('name', $validated)) {
+            $validated['slug'] = Str::slug($validated['name']);
         }
 
-        $product->update($request->only(['description', 'price', 'category_id']));
+        $product->update($validated);
 
         //  حذف كاش المنتج + كل الكاش
          Cache::forget("product_$id");

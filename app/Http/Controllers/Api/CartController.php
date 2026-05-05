@@ -38,9 +38,10 @@ class CartController extends Controller
             'quantity' => 'required|integer|min:1',
         ]);
 
-        $product = Product::findOrFail($request->product_id);
+        $product = Product::with('inventory')->findOrFail($request->product_id);
 
-        if ($product->inventory->quantity < $request->quantity) {
+        $availableQuantity = $product->inventory?->quantity ?? 0;
+        if ($availableQuantity < $request->quantity) {
             return $this->errorResponse('Insufficient stock', null, 400);
         }
 
@@ -67,15 +68,17 @@ class CartController extends Controller
             'quantity' => 'required|integer|min:1',
         ]);
 
+        $cartItem->load('product.inventory');
         $product = $cartItem->product;
 
-        if ($product->inventory->quantity < $request->quantity) {
+        $availableQuantity = $product?->inventory?->quantity ?? 0;
+        if ($availableQuantity < $request->quantity) {
             return $this->errorResponse('Insufficient stock', null, 400);
         }
 
         $cartItem->update(['quantity' => $request->quantity]);
 
-        return $this->successResponse($cartItem, 'Cart updated successfully');
+        return $this->successResponse(new CartItemResource($cartItem->load('product')), 'Cart updated successfully');
     }
 
     public function destroy($id)
