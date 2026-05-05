@@ -8,27 +8,27 @@ use App\Http\Controllers\Api\InventoryController;
 use Illuminate\Support\Facades\Route;
 
 // Public
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
-Route::get('/products', [ProductController::class, 'index']);
-Route::get('/products/{id}', [ProductController::class, 'show']);
-Route::get('/categories', [CategoryController::class, 'index']);
-Route::get('/categories/{id}', [CategoryController::class, 'show']);
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:register_limit');
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login_limit');
+Route::get('/products', [ProductController::class, 'index'])->middleware('throttle:api_general');
+Route::get('/products/{id}', [ProductController::class, 'show'])->middleware('throttle:api_general');
+Route::get('/categories', [CategoryController::class, 'index'])->middleware('throttle:api_general');
+Route::get('/categories/{id}', [CategoryController::class, 'show'])->middleware('throttle:api_general');
 
 // Protected
-Route::middleware('auth:api')->group(function () {
+Route::middleware('auth:api', 'throttle:api_general')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/refresh', [AuthController::class, 'refresh']);
 
-    Route::get('/cart', [CartController::class, 'index']);
-    Route::post('/cart', [CartController::class, 'store']);
-    Route::put('/cart/{id}', [CartController::class, 'update']);
+    Route::get('/cart', [CartController::class, 'index'])->middleware('throttle:cart_limit');
+    Route::post('/cart', [CartController::class, 'store'])->middleware('throttle:cart_limit');
+    Route::put('/cart/{id}', [CartController::class, 'update'])->middleware('throttle:cart_limit');
     Route::delete('/cart/{id}', [CartController::class, 'destroy']);
 
     Route::get('/orders', [OrderController::class, 'index']);
     Route::get('/orders/{id}', [OrderController::class, 'show']);
-    Route::post('/checkout', [OrderController::class, 'checkout']);
+    Route::post('/checkout', [OrderController::class, 'checkout'])->middleware('throttle:checkout_process');
 
     Route::get('/inventory/{productId}', [InventoryController::class, 'show']);
 
