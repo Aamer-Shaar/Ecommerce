@@ -1,66 +1,245 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Ecommerce API (Laravel)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+مشروع Ecommerce بسيط مبني بـ Laravel، يوفر APIs للمنتجات والتصنيفات والسلة والطلبات مع توثيق JWT.
 
-## About Laravel
+## المتطلبات
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- PHP 8.1+
+- Composer
+- قاعدة بيانات (MySQL / MariaDB)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## التشغيل
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan jwt:secret
+php artisan migrate
+php artisan serve
+```
 
-## Learning Laravel
+## تنسيق الاستجابات
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+معظم الاستجابات تأتي بهذا الشكل:
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+```json
+{
+  "success": true,
+  "message": "string",
+  "data": {}
+}
+```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+وفي حال الخطأ:
 
-## Laravel Sponsors
+```json
+{
+  "success": false,
+  "message": "string",
+  "errors": null
+}
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## المصادقة (JWT)
 
-### Premium Partners
+- بعد تسجيل الدخول/التسجيل ستحصل على `access_token`.
+- أرسل التوكن في الهيدر:
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+```http
+Authorization: Bearer <access_token>
+```
 
-## Contributing
+## الـ API Endpoints
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Base URL (افتراضي عند استخدام `php artisan serve`):
 
-## Code of Conduct
+`http://localhost:8000/api`
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### Auth
 
-## Security Vulnerabilities
+#### POST /register
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Body:
 
-## License
+```json
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "secret123",
+  "password_confirmation": "secret123"
+}
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+#### POST /login
+
+Body:
+
+```json
+{
+  "email": "john@example.com",
+  "password": "secret123"
+}
+```
+
+#### POST /logout (Protected)
+
+Body: لا يوجد
+
+#### GET /me (Protected)
+
+Body: لا يوجد
+
+#### POST /refresh (Protected)
+
+Body: لا يوجد
+
+### Products
+
+#### GET /products
+
+Query (اختياري):
+
+- `category_id` (رقم التصنيف)
+- `page` (رقم الصفحة)
+
+Body: لا يوجد
+
+#### GET /products/{id}
+
+Body: لا يوجد
+
+#### POST /products (Admin + Protected)
+
+Body:
+
+```json
+{
+  "name": "iPhone 15",
+  "description": "Product description",
+  "price": 999.99,
+  "category_id": 1
+}
+```
+
+#### PUT /products/{id} (Admin + Protected)
+
+Body (جزئي/اختياري):
+
+```json
+{
+  "name": "New name",
+  "description": "New description",
+  "price": 120.5,
+  "category_id": 2
+}
+```
+
+#### DELETE /products/{id} (Admin + Protected)
+
+Body: لا يوجد
+
+### Categories
+
+#### GET /categories
+
+Body: لا يوجد
+
+#### GET /categories/{id}
+
+Body: لا يوجد
+
+#### POST /categories (Admin + Protected)
+
+Body:
+
+```json
+{
+  "name": "Phones",
+  "description": "Optional description"
+}
+```
+
+#### PUT /categories/{id} (Admin + Protected)
+
+Body (جزئي/اختياري):
+
+```json
+{
+  "name": "New category name",
+  "description": "Optional description"
+}
+```
+
+#### DELETE /categories/{id} (Admin + Protected)
+
+Body: لا يوجد
+
+### Cart (Protected)
+
+#### GET /cart
+
+Body: لا يوجد
+
+#### POST /cart
+
+Body:
+
+```json
+{
+  "product_id": 1,
+  "quantity": 2
+}
+```
+
+#### PUT /cart/{id}
+
+Body:
+
+```json
+{
+  "quantity": 3
+}
+```
+
+#### DELETE /cart/{id}
+
+Body: لا يوجد
+
+### Orders (Protected)
+
+#### GET /orders
+
+Body: لا يوجد
+
+#### GET /orders/{id}
+
+Body: لا يوجد
+
+#### POST /checkout
+
+ينشئ طلباً من عناصر السلة الحالية ويخصم الكميات من المخزون.
+
+Body: لا يوجد
+
+### Inventory
+
+#### GET /inventory/{productId} (Protected)
+
+Body: لا يوجد
+
+#### PUT /inventory/{productId} (Admin + Protected)
+
+Body:
+
+```json
+{
+  "quantity": 100
+}
+```
+
+### Health Check
+
+#### GET /test
+
+Body: لا يوجد

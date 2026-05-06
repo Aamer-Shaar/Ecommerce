@@ -16,7 +16,7 @@ class ProcessOrderJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-     protected $order;
+    protected Order $order;
 
       public $tries = 3; //عدد المحاولات
 
@@ -32,7 +32,8 @@ class ProcessOrderJob implements ShouldQueue
     {
         sleep(2);
         $this->order->update([
-            'status' => 'completed'
+            'status' => 'completed',
+            'completed_at' => now(),
         ]);
     }
 }

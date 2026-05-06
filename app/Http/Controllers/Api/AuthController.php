@@ -7,9 +7,7 @@ use App\Models\User;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
 use Tymon\JWTAuth\Facades\JWTAuth;
-use Tymon\JWTAuth\JWT;
 
 class AuthController extends Controller
 {
@@ -30,7 +28,7 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        $token = auth('api')->login($user);
+        $token = JWTAuth::fromUser($user);
 
         $data = [
             'user' => $user,
@@ -51,40 +49,40 @@ class AuthController extends Controller
 
         $credentials = $request->only('email', 'password');
 
-        if (!$token = auth()->attempt($credentials)) {
+        if (!$token = auth('api')->attempt($credentials)) {
            return $this->errorResponse('Invalid credentials', null, 401);
         }
 
-        return $this->respondWithToken($token);
+        return $this->respondWithToken($token, 'Logged in successfully');
     }
 
     // بيانات المستخدم الحالي
     public function me()
     {
-        return $this->successResponse(auth()->user(), 'User profile retrieved');
+        return $this->successResponse(auth('api')->user(), 'User profile retrieved');
     }
 
     // تسجيل الخروج
     public function logout()
     {
-        auth()->logout();
+        auth('api')->logout();
         return $this->successResponse(null, 'Logged out successfully');
     }
 
     // تحديث التوكن (Refresh)
-    // public function refresh()
-    // {
-    //    return $this->respondWithToken(auth('api')->refresh());
-    // }
+    public function refresh()
+    {
+        return $this->respondWithToken(JWTAuth::parseToken()->refresh(), 'Token refreshed successfully');
+    }
 
     // تنسيق الرد مع التوكن
-    protected function respondWithToken($token)
+    protected function respondWithToken(string $token, string $message = 'Success')
     {
         $data = [
             'access_token' => $token,
             'token_type' => 'bearer',
             // 'expires_in' => auth('api')->factory()->getTTL() * 60,
         ];
-        return $this->successResponse($data, 'Token refreshed successfully');
+        return $this->successResponse($data, $message);
     }
 }
