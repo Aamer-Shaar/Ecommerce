@@ -37,14 +37,12 @@ class OrderController extends Controller
         return $this->successResponse($order, 'Order retrieved successfully');
     }
 
-   public function checkout(Request $request)
-{
+
+    public function checkout(Request $request)
+    {
     $user = auth()->user();
-
-    $cartItems = Cart::with('product')
-        ->where('user_id', $user->id)
-        ->get();
-
+    $cartItems = Cart::with('product')->where('user_id', $user->id)->get();
+    
     if ($cartItems->isEmpty()) {
         return $this->errorResponse('Cart is empty', null, 400);
     }
@@ -52,11 +50,10 @@ class OrderController extends Controller
     DB::beginTransaction();
 
     try {
-
         $totalAmount = 0;
+        $inventoryUpdates = [];
 
         foreach ($cartItems as $item) {
-
             $inventory = \App\Models\Inventory::where('product_id', $item->product_id)
                 ->lockForUpdate()
                 ->first();
@@ -66,6 +63,9 @@ class OrderController extends Controller
             }
 
             $totalAmount += $item->quantity * $item->product->price;
+            
+            $inventory->quantity -= $item->quantity;
+            $inventoryUpdates[] = $inventory;
         }
 
         $order = Order::create([
@@ -75,12 +75,8 @@ class OrderController extends Controller
             'status' => 'pending',
         ]);
 
-        foreach ($cartItems as $item) {
 
-            $inventory = \App\Models\Inventory::where('product_id', $item->product_id)
-                ->lockForUpdate()
-                ->first();
-
+        foreach ($cartItems as $index => $item) {
             OrderItem::create([
                 'order_id'   => $order->id,
                 'product_id' => $item->product_id,
@@ -88,8 +84,7 @@ class OrderController extends Controller
                 'price'      => $item->product->price,
             ]);
 
-            $inventory->quantity -= $item->quantity;
-            $inventory->save();
+            $inventoryUpdates[$index]->save(); 
         }
 
         Cart::where('user_id', $user->id)->delete();
@@ -105,14 +100,8 @@ class OrderController extends Controller
         );
 
     } catch (\Exception $e) {
-
         DB::rollBack();
-
-        return $this->errorResponse(
-            'Checkout failed: ' . $e->getMessage(),
-            null,
-            400
-        );
+        return $this->errorResponse('Checkout failed: ' . $e->getMessage(), null, 400);
     }
 }
 }
