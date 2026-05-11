@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\OrderResource;
-use App\Jobs\ProcessOrderJob;
 use App\Jobs\SendOrderInvoice;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -72,7 +71,8 @@ class OrderController extends Controller
             'order_number' => 'ORD-' . Str::random(8) . time(),
             'user_id' => $user->id,
             'total_amount' => $totalAmount,
-            'status' => 'pending',
+            'status' => 'completed',
+            'completed_at' => now(),
         ]);
 
 
