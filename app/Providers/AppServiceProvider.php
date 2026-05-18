@@ -24,8 +24,8 @@ class AppServiceProvider extends ServiceProvider
     {
         // تعريف محدد للطلبات الخاصة بإنشاء الطلبات (Checkout)
     RateLimiter::for('checkout_process', function (Request $request) {
-        // السماح بـ3 طلبات فقط كل دقيقة لكل مستخدم أو IP
-        return Limit::perMinute(3)->by($request->user()?->id ?: $request->ip())
+        // السماح بـ5 طلبات فقط كل دقيقة لكل مستخدم أو IP
+        return Limit::perMinute(5)->by($request->user()?->id ?: $request->ip())
             ->response(function (Request $request, array $headers) {
                 return response()->json([
                     'message' => 'You have exceeded the allowed order limit. Please wait a moment to protect system resources..'
