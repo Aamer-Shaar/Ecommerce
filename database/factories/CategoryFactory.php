@@ -17,7 +17,10 @@ class CategoryFactory extends Factory
      */
     public function definition(): array
     {
-        $name = $this->faker->unique()->word();
-        return ['name' => $name, 'slug' => Str::slug($name), 'description' => $this->faker->sentence()];
+        $name = $this->faker->unique()->lexify('Category-????-' . $this->faker->numberBetween(1, 9999));
+        return ['name' => $name,
+         'slug' => Str::slug($name),
+          'description' => $this->faker->sentence()
+          ];
     }
 }

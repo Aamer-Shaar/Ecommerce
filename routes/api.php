@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\InventoryController;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
 
 // Public
@@ -41,7 +42,4 @@ Route::middleware('auth:api', 'throttle:api_general')->group(function () {
         Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
         Route::put('/inventory/{productId}', [InventoryController::class, 'update']);
     });
-});
-Route::get('/test', function() {
-    return response()->json(['message' => 'API is working']);
 });
