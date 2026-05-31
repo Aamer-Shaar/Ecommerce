@@ -10,6 +10,7 @@ use App\Traits\ApiResponseTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
@@ -54,7 +55,8 @@ class ProductController extends Controller
             'price'       => 'required|numeric|min:0',
             'category_id' => 'required|exists:categories,id',
         ]);
-
+        DB::beginTransaction();
+         try {
         $product = Product::create([
             'name'        => $request->name,
             'slug'        => Str::slug($request->name),
@@ -67,11 +69,15 @@ class ProductController extends Controller
             'product_id' => $product->id,
             'quantity'   => 0,
         ]);
-
-        //  امسح قوائم المنتجات فقط (منتج جديد يأثر على القوائم)
+         DB::commit();
+        
         $this->clearProductListCache($request->category_id);
-
         return $this->successResponse($product, 'Product created successfully', 201);
+        
+        } catch (\Exception $e) {
+        DB::rollBack();
+        return $this->errorResponse('Failed to create product', null, 500);
+    }
     }
 
     public function update(Request $request, $id)
@@ -92,10 +98,8 @@ class ProductController extends Controller
         if (array_key_exists('name', $validated)) {
             $validated['slug'] = Str::slug($validated['name']);
         }
-
         $product->update($validated);
 
-        //  امسح كاش هذا المنتج تحديداً + القوائم
         Cache::forget("product_{$id}");
         $this->clearProductListCache($product->category_id);
 
