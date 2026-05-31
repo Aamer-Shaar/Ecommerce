@@ -51,7 +51,6 @@ class OrderController extends Controller
 
     try {
         $totalAmount = 0;
-        $inventoryUpdates = [];
         $affectedProductIds = []; // ← نتتبع المنتجات المتأثرة
         $affectedCategoryIds = [];// ← نتتبع الفئات المتأثرة
 
@@ -65,8 +64,7 @@ class OrderController extends Controller
             }
 
             $totalAmount += $item->quantity * $item->product->price;
-            $inventory->quantity -= $item->quantity;
-            $inventoryUpdates[] = $inventory;
+            $inventory->decrement('quantity', $item->quantity); //  احفظ فوراً وأنت ماسك القفل
             $affectedProductIds[] = $item->product_id;
             $affectedCategoryIds[] = $item->product->category_id;
             
@@ -88,15 +86,12 @@ class OrderController extends Controller
                 'quantity'   => $item->quantity,
                 'price'      => $item->product->price,
             ]);
-
-            $inventoryUpdates[$index]->save(); 
         }
 
         Cart::where('user_id', $user->id)->delete();
 
         DB::commit();
 
-        // امسح الكاش كل منتج اشتُري
         foreach ($affectedProductIds as $productId) {
                 Cache::forget("product_{$productId}");
                 Cache::forget("inventory_{$productId}");
@@ -119,7 +114,8 @@ class OrderController extends Controller
 }
 private function clearProductListCache(array $categoryIds = []): void
     {
-        for ($page = 1; $page <= 20; $page++) {
+         $totalPages = ceil(\App\Models\Product::count() / 15);
+        for ($page = 1; $page <=$totalPages; $page++) {
             Cache::forget("products_all_page_{$page}");
 
             foreach ($categoryIds as $categoryId) {
