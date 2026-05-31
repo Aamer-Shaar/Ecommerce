@@ -22,7 +22,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // تعريف محدد للطلبات الخاصة بإنشاء الطلبات (Checkout)
+try {
+        \Illuminate\Support\Facades\Cache::store('redis')->get('health_check');
+    } catch (\Exception $e) {
+        \Illuminate\Support\Facades\Log::warning('Redis unavailable, switching to file cache');
+        config(['cache.default' => 'file']);
+    }
+    
     RateLimiter::for('checkout_process', function (Request $request) {
         // السماح بـ5 طلبات فقط كل دقيقة لكل مستخدم أو IP
         return Limit::perMinute(5)->by($request->user()?->id ?: $request->ip())

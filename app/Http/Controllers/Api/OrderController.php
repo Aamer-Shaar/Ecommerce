@@ -12,6 +12,7 @@ use App\Traits\ApiResponseTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class OrderController extends Controller
 {
@@ -51,6 +52,8 @@ class OrderController extends Controller
     try {
         $totalAmount = 0;
         $inventoryUpdates = [];
+        $affectedProductIds = []; // ← نتتبع المنتجات المتأثرة
+        $affectedCategoryIds = [];// ← نتتبع الفئات المتأثرة
 
         foreach ($cartItems as $item) {
             $inventory = \App\Models\Inventory::where('product_id', $item->product_id)
@@ -62,9 +65,11 @@ class OrderController extends Controller
             }
 
             $totalAmount += $item->quantity * $item->product->price;
-            
             $inventory->quantity -= $item->quantity;
             $inventoryUpdates[] = $inventory;
+            $affectedProductIds[] = $item->product_id;
+            $affectedCategoryIds[] = $item->product->category_id;
+            
         }
 
         $order = Order::create([
@@ -91,6 +96,13 @@ class OrderController extends Controller
 
         DB::commit();
 
+        // امسح الكاش كل منتج اشتُري
+        foreach ($affectedProductIds as $productId) {
+                Cache::forget("product_{$productId}");
+                Cache::forget("inventory_{$productId}");
+            }
+            $this->clearProductListCache(array_unique($affectedCategoryIds));
+
         SendOrderInvoice::dispatch($order);
 
         return $this->successResponse(
@@ -103,5 +115,16 @@ class OrderController extends Controller
         DB::rollBack();
         return $this->errorResponse('Checkout failed: ' . $e->getMessage(), null, 400);
     }
+
 }
+private function clearProductListCache(array $categoryIds = []): void
+    {
+        for ($page = 1; $page <= 20; $page++) {
+            Cache::forget("products_all_page_{$page}");
+
+            foreach ($categoryIds as $categoryId) {
+            Cache::forget("products_{$categoryId}_page_{$page}");
+        }
+        }
+    }
 }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Inventory;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class InventoryController extends Controller
 {
@@ -13,7 +14,10 @@ class InventoryController extends Controller
 
     public function show($productId)
     {
-        $inventory = Inventory::where('product_id', $productId)->firstOrFail();
+        $inventory = Cache::remember("inventory_{$productId}", 3600, function () use ($productId) {
+            return Inventory::where('product_id', $productId)->firstOrFail();
+        });
+
         return $this->successResponse($inventory, 'Inventory retrieved successfully');
     }
 
@@ -30,6 +34,19 @@ class InventoryController extends Controller
         $inventory = Inventory::where('product_id', $productId)->firstOrFail();
         $inventory->update(['quantity' => $request->quantity]);
 
+        //امسح كاش المخزون + المنتج + القوائم  
+        Cache::forget("inventory_{$productId}");
+        Cache::forget("product_{$productId}");
+        $this->clearProductListCache();
+
         return $this->successResponse($inventory, 'Inventory updated successfully');
+    }
+
+    private function clearProductListCache(): void
+    {
+        $totalPages = ceil(\App\Models\Product::count() / 15);
+        for ($page = 1; $page <= $totalPages; $page++) {
+            Cache::forget("products_all_page_{$page}");
+        }
     }
 }
