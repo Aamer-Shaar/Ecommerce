@@ -73,6 +73,14 @@ return [
             'replace_placeholders' => true,
         ],
 
+        'benchmark' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/api-benchmark.log'),
+            'level' => env('API_BENCHMARK_LOG_LEVEL', 'info'),
+            'days' => 14,
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),

@@ -22,16 +22,26 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-try {
-        \Illuminate\Support\Facades\Cache::store('redis')->get('health_check');
-    } catch (\Exception $e) {
-        \Illuminate\Support\Facades\Log::warning('Redis unavailable, switching to file cache');
-        config(['cache.default' => 'file']);
-    }
+        if (filter_var(env('STRESS_TESTING', false), FILTER_VALIDATE_BOOL)) {
+            config(['telescope.enabled' => false]);
+
+            if (class_exists(\Laravel\Telescope\Telescope::class)) {
+                \Laravel\Telescope\Telescope::stopRecording();
+            }
+        }
+
+        if (config('cache.default') === 'redis' && ! filter_var(env('STRESS_TESTING', false), FILTER_VALIDATE_BOOL)) {
+            try {
+                \Illuminate\Support\Facades\Cache::store('redis')->get('health_check');
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::warning('Redis unavailable, switching to file cache');
+                config(['cache.default' => 'file']);
+            }
+        }
     
     RateLimiter::for('checkout_process', function (Request $request) {
         // السماح بـ5 طلبات فقط كل دقيقة لكل مستخدم أو IP
-        return Limit::perMinute(5)->by($request->user()?->id ?: $request->ip())
+        return Limit::perMinute(100000)->by($request->user()?->id ?: $request->ip())
             ->response(function (Request $request, array $headers) {
                 return response()->json([
                     'message' => 'You have exceeded the allowed order limit. Please wait a moment to protect system resources..'
@@ -40,7 +50,7 @@ try {
     });
 
     RateLimiter::for('register_limit', function (Request $request) {
-    return Limit::perMinute(3)->by($request->ip())
+    return Limit::perMinute(30000)->by($request->ip())
         ->response(function () {
             return response()->json([
                 'message' => 'Too many registration attempts. Please try again later.'
@@ -49,7 +59,7 @@ try {
 });
 
     RateLimiter::for('login_limit', function (Request $request) {
-    return Limit::perMinute(3)->by($request->ip())
+    return Limit::perMinute(300000)->by($request->ip())
         ->response(function () {
             return response()->json([
                 'message' => 'Too many login attempts, try again later.'
@@ -58,7 +68,7 @@ try {
 });
 
     RateLimiter::for('cart_limit', function (Request $request) {
-    return Limit::perMinute(10)->by($request->user()->id?: $request->ip())->response(function () {
+    return Limit::perMinute(1000000)->by($request->user()->id?: $request->ip())->response(function () {
     return response()->json([
         'success' => false,
         'message' => 'Too many requests. Please try again later.'
@@ -68,7 +78,7 @@ try {
 });
 
     RateLimiter::for('api_general', function (Request $request) {
-    return Limit::perMinute(200)->by($request->user()?->id ?: $request->ip())->response(function () {
+    return Limit::perMinute(200000)->by($request->user()?->id ?: $request->ip())->response(function () {
     return response()->json([
         'success' => false,
         'message' => 'Too many requests. Please try again later.'

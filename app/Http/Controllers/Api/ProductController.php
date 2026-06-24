@@ -21,24 +21,39 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $cacheKey = 'products_' . ($request->category_id ?? 'all') . '_page_' . ($request->page ?? 1);
-        $products = Cache::remember($cacheKey, $this->cacheTTL, function () use ($request) {
-        $query = Product::with(['category', 'inventory']);
+        try {
+            $products = Cache::remember($cacheKey, $this->cacheTTL, function () use ($request) {
+                $query = Product::with(['category', 'inventory']);
+
+                if ($request->has('category_id')) {
+                    $query->where('category_id', $request->category_id);
+                }
+
+                return $query->paginate(15);
+            });
+        } catch (\Throwable $e) {
+            // Keep the endpoint responsive even if the remote cache slows down temporarily.
+            $query = Product::with(['category', 'inventory']);
 
             if ($request->has('category_id')) {
                 $query->where('category_id', $request->category_id);
             }
 
-            return $query->paginate(15);
-        });
+            $products = $query->paginate(15);
+        }
 
         return $this->successResponse(new ProductCollection($products), 'Products retrieved successfully');
     }
 
     public function show($id)
     {
-        $product = Cache::remember("product_{$id}", $this->cacheTTL, function () use ($id) {
-            return Product::with(['category', 'inventory'])->findOrFail($id);
-        });
+        try {
+            $product = Cache::remember("product_{$id}", $this->cacheTTL, function () use ($id) {
+                return Product::with(['category', 'inventory'])->findOrFail($id);
+            });
+        } catch (\Throwable $e) {
+            $product = Product::with(['category', 'inventory'])->findOrFail($id);
+        }
 
         return $this->successResponse($product, 'Product retrieved successfully');
     }
